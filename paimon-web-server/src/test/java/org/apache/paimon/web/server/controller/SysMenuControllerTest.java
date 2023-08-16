@@ -55,7 +55,7 @@ public class SysMenuControllerTest {
     private static final String loginPath = "/api/login";
     private static final String logoutPath = "/api/logout";
 
-    @Value("${spring.application.name}")
+    @Value("${sa-token.token-name}")
     private String tokenName;
 
     @Autowired private MockMvc mockMvc;
@@ -66,7 +66,7 @@ public class SysMenuControllerTest {
     public void before() throws Exception {
         LoginDto login = new LoginDto();
         login.setUsername("admin");
-        login.setPassword("21232f297a57a5a743894a0e4a801fc3");
+        login.setPassword("admin");
 
         String result =
                 mockMvc.perform(

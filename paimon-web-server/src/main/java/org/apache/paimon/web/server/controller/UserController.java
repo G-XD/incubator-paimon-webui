@@ -19,16 +19,29 @@
 package org.apache.paimon.web.server.controller;
 
 import org.apache.paimon.web.server.data.model.User;
+import org.apache.paimon.web.server.data.result.PageR;
 import org.apache.paimon.web.server.data.result.R;
+import org.apache.paimon.web.server.data.result.enums.Status;
 import org.apache.paimon.web.server.service.UserService;
+import org.apache.paimon.web.server.util.PageSupport;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 import static org.apache.paimon.web.server.data.result.enums.Status.USER_NOT_EXIST;
 
@@ -55,5 +68,72 @@ public class UserController {
         }
         user.setPassword(null);
         return R.succeed(user);
+    }
+
+    /**
+     * Retrieves a list of users based on the provided search criteria.
+     *
+     * @param user the user object containing the search criteria
+     * @return {@link PageR} with {@link User} a PageR object containing the list of users and
+     *     additional information
+     */
+    @SaCheckPermission("system:user:list")
+    @GetMapping("/list")
+    public PageR<User> list(User user) {
+        IPage<User> page = PageSupport.startPage();
+        List<User> list = userService.selectUserList(page, user);
+        return PageR.<User>builder().success(true).total(page.getTotal()).data(list).build();
+    }
+
+    /**
+     * Adds a new user to the system.
+     *
+     * @param user the user object to be added
+     * @return {@link R} with {@link Void} an R object indicating success or failure
+     */
+    @SaCheckPermission("system:user:add")
+    @PostMapping
+    public R<Void> add(@Validated @RequestBody User user) {
+        return userService.addUser(user) ? R.succeed() : R.failed();
+    }
+
+    /**
+     * Edits a user.
+     *
+     * @param user the user object to be edited
+     * @return {@link R} with {@link Void} a response object indicating success or failure
+     */
+    @SaCheckPermission("system:user:edit")
+    @PutMapping
+    public R<Void> edit(@Validated @RequestBody User user) {
+        return userService.updateUser(user) ? R.succeed() : R.failed();
+    }
+
+    /**
+     * Remove the specified users.
+     *
+     * @param userIds an array of integers representing the IDs of the users to be removed
+     * @return {@link R} with {@link Void} an R object representing the result of the removal
+     *     operation
+     */
+    @SaCheckPermission("system:user:remove")
+    @DeleteMapping("/{userIds}")
+    public R<Void> remove(@PathVariable Integer[] userIds) {
+        if (ArrayUtils.contains(userIds, StpUtil.getLoginIdAsInt())) {
+            return R.failed(Status.USER_CANNOT_DELETE_ONESELF);
+        }
+        return userService.deleteUsers(userIds) ? R.succeed() : R.failed();
+    }
+
+    /**
+     * Reset the password of a user.
+     *
+     * @param user the user object containing the new password
+     * @return {@link R} with {@link Void} the result of the password reset operation
+     */
+    @SaCheckPermission("system:user:resetPwd")
+    @PutMapping("/resetPwd")
+    public R<Void> resetPwd(@RequestBody User user) {
+        return userService.resetPwd(user) ? R.succeed() : R.failed();
     }
 }

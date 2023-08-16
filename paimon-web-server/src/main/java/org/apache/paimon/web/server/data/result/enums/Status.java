@@ -43,6 +43,10 @@ public enum Status {
     USER_NOT_EXIST(10001, "user.not.exist"),
     USER_PASSWORD_ERROR(10002, "user.password.error"),
     USER_DISABLED_ERROR(10003, "user.is.disabled"),
+    USER_EMAIL_DUPLICATE(10004, "user.email.duplicate"),
+    USER_PHONE_DUPLICATE(10005, "user.phone.duplicate"),
+    USER_NAME_DUPLICATE(10006, "user.name.duplicate"),
+    USER_CANNOT_DELETE_ONESELF(10007, "user.delete.self"),
     /** ------------role-----------------. */
     ROLE_IN_USED(10101, "role.in.used"),
     ROLE_NAME_IS_EXIST(10102, "role.name.exist"),

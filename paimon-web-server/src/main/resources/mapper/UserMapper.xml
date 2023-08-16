@@ -114,5 +114,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		<include refid="selectUserVo"/>
 		where u.id = #{id}
 	</select>
+
+	<update id="updateUser" parameterType="org.apache.paimon.web.server.data.model.User">
+		update user
+		<set>
+			<if test="userName != null and userName != ''">user_name = #{userName},</if>
+			<if test="nickName != null and nickName != ''">nick_name = #{nickName},</if>
+			<if test="email != null ">email = #{email},</if>
+			<if test="mobile != null ">mobile = #{mobile},</if>
+			<if test="url != null and url != ''">url = #{url},</if>
+			update_time = sysdate()
+		</set>
+		where id = #{id}
+	</update>
 	
 </mapper> 

@@ -23,19 +23,30 @@ import org.apache.paimon.web.server.data.enums.UserType;
 import org.apache.paimon.web.server.data.model.User;
 import org.apache.paimon.web.server.data.result.exception.BaseException;
 import org.apache.paimon.web.server.data.result.exception.user.UserDisabledException;
+import org.apache.paimon.web.server.data.result.exception.user.UserEmailDuplicateException;
+import org.apache.paimon.web.server.data.result.exception.user.UserNameDuplicateException;
 import org.apache.paimon.web.server.data.result.exception.user.UserNotExistsException;
 import org.apache.paimon.web.server.data.result.exception.user.UserPasswordNotMatchException;
+import org.apache.paimon.web.server.data.result.exception.user.UserPhoneDuplicateException;
 import org.apache.paimon.web.server.mapper.UserMapper;
+import org.apache.paimon.web.server.mapper.UserRoleMapper;
 import org.apache.paimon.web.server.service.LdapService;
 import org.apache.paimon.web.server.service.UserService;
 
+import cn.dev33.satoken.secure.SaSecureUtil;
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /** UserServiceImpl. */
 @Service
@@ -43,6 +54,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Autowired private LdapService ldapService;
     @Autowired private UserMapper userMapper;
+    @Autowired private UserRoleMapper userRoleMapper;
 
     /**
      * login by username and password.
@@ -77,7 +89,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null) {
             throw new UserNotExistsException();
         }
-        if (!user.getPassword().equals(password)) {
+        if (!user.getPassword().equals(SaSecureUtil.md5(password))) {
             throw new UserPasswordNotMatchException();
         }
         return user;
@@ -122,5 +134,101 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public List<User> selectUnallocatedList(User user) {
         return userMapper.selectUnallocatedList(user);
+    }
+
+    /**
+     * Paging and querying user data based on conditions.
+     *
+     * @param page page params
+     * @param user query params
+     * @return user list
+     */
+    @Override
+    public List<User> selectUserList(IPage<User> page, User user) {
+        LambdaQueryWrapper<User> queryWrapper =
+                new LambdaQueryWrapper<User>()
+                        .eq(user.getUserType() != null, User::getUserType, user.getUserType())
+                        .like(
+                                StringUtils.isNotBlank(user.getEmail()),
+                                User::getEmail,
+                                user.getEmail())
+                        .like(
+                                StringUtils.isNotBlank(user.getNickname()),
+                                User::getNickname,
+                                user.getNickname())
+                        .like(
+                                StringUtils.isNotBlank(user.getUsername()),
+                                User::getUsername,
+                                user.getUsername());
+        List<User> result = this.page(page, queryWrapper).getRecords();
+        result.forEach(u -> u.setPassword(null));
+        return result;
+    }
+
+    /**
+     * Reset password.
+     *
+     * @param user user info
+     * @return result
+     */
+    @Override
+    public boolean resetPwd(User user) {
+        return this.lambdaUpdate()
+                .set(User::getPassword, SaSecureUtil.md5(user.getPassword()))
+                .eq(User::getId, user.getId())
+                .update();
+    }
+
+    /**
+     * Add user.
+     *
+     * @param user user info
+     * @return result
+     */
+    @Override
+    public boolean addUser(User user) throws BaseException {
+        this.checkUserUnique(user);
+        user.setPassword(SaSecureUtil.md5(user.getPassword()));
+        return this.save(user);
+    }
+
+    /**
+     * Update user.
+     *
+     * @param user user info
+     * @return result
+     */
+    @Override
+    public boolean updateUser(User user) {
+        this.checkUserUnique(user);
+        return userMapper.updateUser(user) > 0;
+    }
+
+    /**
+     * Deletes the users with the specified user IDs.
+     *
+     * @param userIds the list of user IDs to delete
+     * @return true if the users were successfully deleted, false otherwise
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteUsers(Integer[] userIds) {
+        userRoleMapper.deleteUserRole(userIds);
+        return this.removeBatchByIds(Arrays.stream(userIds).collect(Collectors.toList()));
+    }
+
+    public void checkUserUnique(User user) {
+        if (StringUtils.isNotBlank(user.getUsername())
+                && this.lambdaQuery().eq(User::getUsername, user.getUsername()).count() > 0) {
+            throw new UserNameDuplicateException();
+        }
+        if (StringUtils.isNotBlank(user.getEmail())
+                && this.lambdaQuery().eq(User::getEmail, user.getEmail()).count() > 0) {
+            throw new UserEmailDuplicateException();
+        }
+        if (StringUtils.isNotBlank(user.getMobile())
+                && this.lambdaQuery().eq(User::getMobile, user.getMobile()).count() > 0) {
+            throw new UserPhoneDuplicateException();
+        }
     }
 }

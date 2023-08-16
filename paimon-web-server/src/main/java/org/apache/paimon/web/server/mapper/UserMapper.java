@@ -67,4 +67,12 @@ public interface UserMapper extends BaseMapper<User> {
      * @return user info
      */
     User selectUserById(Integer userId);
+
+    /**
+     * Update user info.
+     *
+     * @param user user info
+     * @return updated row num
+     */
+    int updateUser(User user);
 }

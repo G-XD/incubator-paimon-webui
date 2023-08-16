@@ -53,7 +53,7 @@ mybatis-plus:
     # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 sa-token:
-  token-name: ${spring.application.name}
+  token-name: paimon-web-ui
   timeout: 2592000
   active-timeout: -1
   is-concurrent: true

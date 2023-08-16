@@ -22,6 +22,7 @@ import org.apache.paimon.web.server.data.dto.LoginDto;
 import org.apache.paimon.web.server.data.model.User;
 import org.apache.paimon.web.server.data.result.exception.BaseException;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
@@ -52,4 +53,45 @@ public interface UserService extends IService<User> {
      * @return user list
      */
     List<User> selectUnallocatedList(User user);
+
+    /**
+     * Paging and querying user data based on conditions.
+     *
+     * @param page page params
+     * @param user query params
+     * @return user list
+     */
+    List<User> selectUserList(IPage<User> page, User user);
+
+    /**
+     * Reset password.
+     *
+     * @param user user info
+     * @return result
+     */
+    boolean resetPwd(User user);
+
+    /**
+     * Add user.
+     *
+     * @param user user info
+     * @return result
+     */
+    boolean addUser(User user) throws BaseException;
+
+    /**
+     * Update user.
+     *
+     * @param user user info
+     * @return result
+     */
+    boolean updateUser(User user);
+
+    /**
+     * Deletes the users with the specified user IDs.
+     *
+     * @param userIds the list of user IDs to delete
+     * @return true if the users were successfully deleted, false otherwise
+     */
+    boolean deleteUsers(Integer[] userIds);
 }

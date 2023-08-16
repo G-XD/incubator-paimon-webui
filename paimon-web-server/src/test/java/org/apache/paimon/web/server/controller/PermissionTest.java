@@ -51,7 +51,7 @@ public class PermissionTest {
 
     private static final String getUserPath = "/api/user";
 
-    @Value("${spring.application.name}")
+    @Value("${sa-token.token-name}")
     private String tokenName;
 
     @Autowired private MockMvc mockMvc;
@@ -62,7 +62,7 @@ public class PermissionTest {
     public void before() throws Exception {
         LoginDto login = new LoginDto();
         login.setUsername("common");
-        login.setPassword("21232f297a57a5a743894a0e4a801fc3");
+        login.setPassword("common");
 
         String result =
                 mockMvc.perform(
