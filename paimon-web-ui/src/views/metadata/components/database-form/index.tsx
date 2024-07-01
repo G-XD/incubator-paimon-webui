@@ -17,7 +17,7 @@ under the License. */
 
 import { Add } from '@vicons/ionicons5'
 
-import { createDatabase, type DatabaseFormDTO } from '@/api/models/catalog'
+import { type DatabaseFormDTO, createDatabase } from '@/api/models/catalog'
 import { useCatalogStore } from '@/store/catalog'
 import IModal from '@/components/modal'
 import type { IFormInst } from '@/components/dynamic-form/types'
@@ -25,8 +25,8 @@ import type { IFormInst } from '@/components/dynamic-form/types'
 const props = {
   catalogId: {
     type: Number as PropType<number>,
-    require: true
-  }
+    require: true,
+  },
 }
 
 export default defineComponent({
@@ -37,39 +37,39 @@ export default defineComponent({
     const message = useMessage()
 
     const catalogStore = useCatalogStore()
-    const [, createFetch, { loading }] = createDatabase()
+    const [, createFetch] = createDatabase()
 
     const modalRef = ref<{ formRef: IFormInst }>()
     const showModal = ref(false)
 
-    const handleConfirm = async (values: DatabaseFormDTO) => {
+    async function handleConfirm(values: DatabaseFormDTO) {
       await modalRef.value?.formRef?.validate()
       if (props.catalogId) {
         await createFetch({
           params: {
             ...values,
-            catalogId: props.catalogId
-          }
+            catalogId: props.catalogId,
+          },
         })
 
         handleCloseModal()
         message.success(t('Create Successfully'))
         values = reactive({
-          name: ''
+          name: '',
         })
         catalogStore.getAllCatalogs(true)
       }
     }
 
-    const handleOpenModal = (e: Event) => {
+    function handleOpenModal(e: Event) {
       e.stopPropagation()
       showModal.value = true
     }
 
-    const handleCloseModal = () => {
+    function handleCloseModal() {
       showModal.value = false
       modalRef.value?.formRef?.resetValues({
-        name: ''
+        name: '',
       })
     }
 
@@ -80,7 +80,7 @@ export default defineComponent({
       t,
       handleOpenModal,
       handleCloseModal,
-      handleConfirm
+      handleConfirm,
     }
   },
   render() {
@@ -92,14 +92,14 @@ export default defineComponent({
           </n-icon>
         </n-button>
         <IModal
-          ref='modalRef'
+          ref="modalRef"
           showModal={this.showModal}
           title={this.t(`metadata.create_database`)}
-          formType={'DATABASE'}
+          formType="DATABASE"
           onCancel={this.handleCloseModal}
           onConfirm={this.handleConfirm}
         />
       </>
     )
-  }
+  },
 })

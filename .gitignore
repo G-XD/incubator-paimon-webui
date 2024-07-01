@@ -19,12 +19,12 @@ target/
 .tmp
 node/
 paimon-web-ui/.idea
-paimon-web-ui/.vscode
 paimon-web-ui/auto-imports.d.ts
 paimon-web-ui/components.d.ts
 paimon-web-ui/.eslintrc-auto-import.json
 paimon-web-ui/httpData
 paimon-web-ui/apiWeb.json
+paimon-web-server/src/main/resources/static/**
 logs/*
 .mvn/
 .www
@@ -44,7 +44,7 @@ target
 dependency-reduced-pom.xml
 *.dependency-reduced-pom.xml
 !.idea/paimon.svg
-
+**/dist/**
 # Logs
 logs
 *.log
@@ -66,7 +66,6 @@ coverage
 /cypress/screenshots/
 
 # Editor directories and files
-*.vscode
 !.vscode/extensions.json
 .idea
 *.suo
@@ -74,3 +73,10 @@ coverage
 *.njsproj
 *.sln
 *.sw?
+
+docs/node_modules
+docs/.vitepress/cache
+docs/.vitepress/cache/*
+docs/.vitepress/cache/deps
+docs/.vitepress/cache/deps/*
+docs/.vitepress/dist

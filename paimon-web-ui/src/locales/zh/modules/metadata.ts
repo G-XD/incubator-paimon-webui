@@ -24,21 +24,25 @@ export default {
   data_file: '数据文件',
 
   create_catalog: '创建 Catalog',
+  delete_catalog: '删除 Catalog',
   catalog_name: 'Catalog 名称',
   catalog_type: 'Catalog 类型',
   catalog_warehouse: 'Warehouse',
   catalog_hiveuri: 'Hive Uri',
   catalog_hive_conf_dir: 'Hive Conf Dir',
-  catalog_filesystem_type:'文件系统类型',
-  catalog_endpoint:'Endpoint',
-  catalog_access_key:'Access Key',
-  catalog_secret_key:'Secret Key',
+  catalog_filesystem_type: '文件系统类型',
+  catalog_endpoint: 'Endpoint',
+  catalog_access_key: 'Access Key',
+  catalog_secret_key: 'Secret Key',
 
   create_database: '创建 Database',
+  delete_database: '删除 Database',
   database_name: 'Database 名称',
   database_des: 'Database 描述',
 
   create_table: '创建 Table',
+  rename_table: '重命名',
+  delete_table: '删除 Table',
   table_basic_information: '主要信息',
   table_name: 'Table 名称',
   table_des: 'Table 描述',
@@ -50,11 +54,10 @@ export default {
   column_pk: '主键',
   column_nullable: '是否为空',
   column_default: '默认值',
-  column_comment: '标注',
+  column_comment: '备注',
   column_action: '操作',
 
   partition_columns: '分区列',
 
   table_add_options: '增加选项',
 }
-

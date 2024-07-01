@@ -15,28 +15,27 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License. */
 
-import { Add, AddCircleOutline } from '@vicons/ionicons5'
-
-import { useCatalogStore } from '@/store/catalog'
-import { type ColumnDTO, createColumns } from '@/api/models/catalog'
-import { transformOption } from '@/views/metadata/constant'
+import { Add } from '@vicons/ionicons5'
 
 import ColumnFormContent, { newField } from '../table-column-content'
+import { useCatalogStore } from '@/store/catalog'
+import { type ColumnDTO, alterTable, createColumns } from '@/api/models/catalog'
+import { transformOption } from '@/views/metadata/constant'
 
-type ColumnFormType = {
+interface ColumnFormType {
   tableColumns: ColumnDTO[]
 }
 
 const props = {
   visible: {
     type: Boolean as PropType<boolean>,
-    required: true
+    required: true,
   },
   tableColumns: {
-    type: Object as PropType<ColumnDTO[]>
+    type: Object as PropType<ColumnDTO[]>,
   },
   onConfirm: [Function, Array] as PropType<() => Promise<void>>,
-  onClose: [Function, Array] as PropType<() => void>
+  onClose: [Function, Array] as PropType<() => void>,
 }
 
 export default defineComponent({
@@ -47,7 +46,8 @@ export default defineComponent({
     const message = useMessage()
 
     const catalogStore = useCatalogStore()
-    const [, createFetch, { loading }] = createColumns()
+    const [, createFetch, { loading: createLoading }] = createColumns()
+    const [, editColumn, { loading: editLoading }] = alterTable()
 
     const formRef = ref()
     const formValue = ref<ColumnFormType>(resetState())
@@ -56,13 +56,15 @@ export default defineComponent({
       return Boolean(props.tableColumns)
     })
 
-    const handleConfirm = async () => {
+    const loading = computed(() => createLoading.value || editLoading.value)
+
+    async function handleAddColumn() {
       await formRef.value.validate()
       await createFetch({
         params: transformOption({
           ...toRaw(catalogStore.currentTable),
-          tableColumns: toRaw(formValue.value).tableColumns
-        })
+          tableColumns: toRaw(formValue.value).tableColumns,
+        }),
       })
 
       handleCloseModal()
@@ -70,7 +72,33 @@ export default defineComponent({
       props.onConfirm!()
     }
 
-    const handleCloseModal = () => {
+    function handleFieldSort() {
+      const columns = toRaw(formValue.value).tableColumns
+      columns.forEach((item, index) => {
+        item.sort = index
+      })
+    }
+
+    async function handleEditColumn() {
+      await formRef.value.validate()
+      const currentTable = toRaw(catalogStore.currentTable)!
+      const { catalogName, databaseName, tableName } = currentTable
+      handleFieldSort()
+      await editColumn({
+        params: {
+          catalogName,
+          databaseName,
+          tableName,
+          tableColumns: toRaw(formValue.value).tableColumns,
+        },
+      })
+
+      handleCloseModal()
+      message.success(t(`${isEdit.value ? 'Edit' : 'Create'} Column`))
+      props.onConfirm!()
+    }
+
+    function handleCloseModal() {
       props.onClose!()
       nextTick(() => {
         formValue.value = resetState()
@@ -79,9 +107,9 @@ export default defineComponent({
 
     function resetState() {
       return {
-        tableColumns: (Boolean(props.tableColumns)
+        tableColumns: (props.tableColumns
           ? [...(toRaw(props.tableColumns) || [])]
-          : [JSON.parse(JSON.stringify(newField))]) as ColumnDTO[]
+          : [JSON.parse(JSON.stringify(newField))]) as ColumnDTO[],
       }
     }
 
@@ -89,7 +117,7 @@ export default defineComponent({
       () => isEdit.value,
       () => {
         formValue.value = resetState()
-      }
+      },
     )
 
     const handleAddOption = () => {
@@ -106,8 +134,9 @@ export default defineComponent({
 
       t,
       handleCloseModal,
-      handleConfirm,
-      handleAddOption
+      handleAddColumn,
+      handleAddOption,
+      handleEditColumn,
     }
   },
   render() {
@@ -116,17 +145,21 @@ export default defineComponent({
         <n-card
           bordered={true}
           title={`${this.isEdit ? 'Edit' : 'Create'} Column`}
-          style="width: 1100px"
+          style={{ width: this.isEdit ? '1000px' : '1110px' }}
         >
           {{
-            'header-extra': () => (
-              <n-button quaternary circle size="tiny" onClick={this.handleAddOption}>
-                <n-icon>
-                  <Add />
-                </n-icon>
-              </n-button>
-            ),
-            default: () => (
+            'header-extra': () => {
+              if (!this.isEdit) {
+                return (
+                  <n-button quaternary circle size="tiny" onClick={this.handleAddOption}>
+                    <n-icon>
+                      <Add />
+                    </n-icon>
+                  </n-button>
+                )
+              }
+            },
+            'default': () => (
               <n-form
                 ref="formRef"
                 label-placement="top"
@@ -135,21 +168,22 @@ export default defineComponent({
                 model={this.formValue}
               >
                 <ColumnFormContent
-                  v-model:data={this.formValue.tableColumns}
+                  v-model:modelValue={this.formValue.tableColumns}
+                  isEdit={this.isEdit}
                 />
               </n-form>
             ),
-            action: () => (
+            'action': () => (
               <n-space justify="end">
                 <n-button onClick={this.handleCloseModal}>{this.t('layout.cancel')}</n-button>
-                <n-button type="primary" loading={this.loading} onClick={this.handleConfirm}>
+                <n-button type="primary" loading={this.loading} onClick={this.isEdit ? this.handleEditColumn : this.handleAddColumn}>
                   {this.t('layout.confirm')}
                 </n-button>
               </n-space>
-            )
+            ),
           }}
         </n-card>
       </n-modal>
     )
-  }
+  },
 })

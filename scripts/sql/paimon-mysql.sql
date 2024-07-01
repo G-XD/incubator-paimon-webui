@@ -27,7 +27,8 @@ CREATE TABLE if not exists `user`
     `enabled`     tinyint(1)   NOT NULL DEFAULT 1 COMMENT 'is enable',
     `is_delete`   tinyint(1)   NOT NULL DEFAULT 0 COMMENT 'is delete',
     `create_time` datetime(0)  NULL     DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
-    `update_time` datetime(0)  NULL     DEFAULT CURRENT_TIMESTAMP COMMENT 'update time'
+    `update_time` datetime(0)  NULL     DEFAULT CURRENT_TIMESTAMP COMMENT 'update time',
+    UNIQUE KEY `username` (`username`)
     ) ENGINE = InnoDB DEFAULT CHARSET=utf8;
 
 DROP TABLE IF EXISTS `tenant`;
@@ -113,8 +114,7 @@ CREATE TABLE if not exists `role_menu`
 DROP TABLE IF EXISTS `catalog`;
 CREATE TABLE if not exists `catalog`
 (
-    id            int                                  not null comment 'id'
-    primary key,
+    id            int(11)  not null auto_increment primary key comment 'id',
     catalog_type  varchar(50)                          not null comment 'catalog type',
     catalog_name  varchar(100)                         not null comment 'catalog name',
     warehouse     varchar(200)                         not null comment 'warehouse',
@@ -142,7 +142,7 @@ CREATE TABLE if not exists `cluster`
 DROP TABLE IF EXISTS `cdc_job_definition`;
 CREATE TABLE if not exists `cdc_job_definition`
 (
-    id          int                                not null comment 'id',
+    id          int(11)  not null auto_increment primary key comment 'id',
     `name`      varchar(20)                        not null comment 'name',
     description varchar(200)                       null comment 'description',
     cdc_type    int                                not null comment 'cdc type ',
@@ -154,6 +154,53 @@ CREATE TABLE if not exists `cdc_job_definition`
     constraint cdc_job_definition_pk
     unique (`name`)
 ) engine = innodb;
+
+CREATE TABLE if not exists `job`
+(
+    `id`          int(11)     not null auto_increment primary key comment 'id',
+    `job_id`     varchar(100)  not null comment 'job id',
+    `job_name`     varchar(200) comment 'job name',
+    `file_name`     varchar(200) comment 'file name',
+    `type`     varchar(100)  comment 'job type',
+    `execute_mode`     varchar(50)  comment 'execute mode',
+    `cluster_id`     varchar(100)  comment 'cluster id',
+    `uid`          INT(11) COMMENT 'User ID',
+    `config`     text   comment 'config',
+    `statements`   text COMMENT 'statements',
+    `status` varchar(50) COMMENT 'status',
+    `start_time` datetime(0) NULL COMMENT 'start time',
+    `end_time` datetime(0) NULL COMMENT 'end time',
+    `create_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
+    `update_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'update time'
+    )  ENGINE = InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `statement`;
+CREATE TABLE if not exists `statement`
+(
+    `id`          int(11)     not null auto_increment primary key comment 'id',
+    `statement_name`     varchar(200)  not null comment 'task type',
+    `task_type`     varchar(100)  not null comment 'task type',
+    `is_streaming`  tinyint(1)  comment 'is steaming',
+    `uid`     int(11)  comment 'user id',
+    `cluster_id`     int(11)  comment 'cluster id',
+    `statements`   text COMMENT 'statements',
+    `create_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
+    `update_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'update time'
+    )  ENGINE = InnoDB DEFAULT CHARSET=utf8;
+    
+DROP TABLE IF EXISTS `history`;
+CREATE TABLE if not exists `history`
+(
+    `id`          int(11)     not null auto_increment primary key comment 'id',
+    `name`     varchar(100)  not null comment 'name',
+    `task_type`     varchar(100)  not null comment 'task type',
+    `is_streaming`  tinyint(1)  comment 'is steaming',
+    `uid`     int(11)  comment 'user id',
+    `cluster_id`     int(11)  comment 'cluster id',
+    `statements`   text COMMENT 'statements',
+    `create_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
+    `update_time` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'update time'
+    )  ENGINE = InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO `user` ( id, username, password, nickname, mobile
                    , email, enabled, is_delete)
@@ -173,23 +220,61 @@ values (1, 'admin', 'admin', 1),
        (2, 'common', 'common', 2);
 
 insert into sys_menu (id, menu_name, parent_id, sort, path, component, is_frame, type, perms, icon, remark)
-values (1, 'all', 0, 1, 'system', null, 1, 'M', 'system', 'admin', 'system root path'),
-       (100, 'user manager', 1, 1, 'user', 'user/index', 1, 'C', 'system:user:list', 'user', 'user manager'),
-       (1000, 'user query', 100, 1, '', '', 1, 'F', 'system:user:query', '#', ''),
-       (1001, 'user add', 100, 2, '', '', 1, 'F', 'system:user:add', '#', ''),
-       (1002, 'user update', 100, 3, '', '', 1, 'F', 'system:user:update', '#', ''),
-       (1003, 'user delete', 100, 4, '', '', 1, 'F', 'system:user:delete', '#', ''),
-       (1004, 'user reset', 100, 5, '', '', 1, 'F', 'system:user:change:password', '#', ''),
-       (200, 'role manager', 1, 1, 'role', 'role/index', 1, 'C', 'system:role:list', 'role', 'role manager'),
-       (2000, 'role query', 200, 1, '', '', 1, 'F', 'system:role:query', '#', ''),
-       (2001, 'role add', 200, 2, '', '', 1, 'F', 'system:role:add', '#', ''),
-       (2002, 'role update', 200, 3, '', '', 1, 'F', 'system:role:update', '#', ''),
-       (2003, 'role delete', 200, 4, '', '', 1, 'F', 'system:role:delete', '#', ''),
-       (300, 'menu manager', 1, 1, 'menu', 'menu/index', 1, 'C', 'system:menu:list', 'menu', 'menu manager'),
-       (3000, 'menu query', 300, 1, '', '', 1, 'F', 'system:menu:query', '#', ''),
-       (3001, 'menu add', 300, 2, '', '', 1, 'F', 'system:menu:add', '#', ''),
-       (3002, 'menu update', 300, 3, '', '', 1, 'F', 'system:menu:update', '#', ''),
-       (3003, 'menu delete', 300, 4, '', '', 1, 'F', 'system:menu:delete', '#', '');
+values (1, 'system', 0, 1, 'system', null, 1, 'M', 'system', 'admin', 'system root path'),
+       (100, 'user_manager', 1, 1, 'user', 'user/index', 1, 'C', 'system:user:list', 'user', 'user manager'),
+       (1000, 'user_query', 100, 1, '', '', 1, 'F', 'system:user:query', '#', ''),
+       (1001, 'user_add', 100, 2, '', '', 1, 'F', 'system:user:add', '#', ''),
+       (1002, 'user_update', 100, 3, '', '', 1, 'F', 'system:user:update', '#', ''),
+       (1003, 'user_delete', 100, 4, '', '', 1, 'F', 'system:user:delete', '#', ''),
+       (1004, 'user_reset', 100, 5, '', '', 1, 'F', 'system:user:change:password', '#', ''),
+       (101, 'role_manager', 1, 2, 'role', 'role/index', 1, 'C', 'system:role:list', 'role', 'role manager'),
+       (1010, 'role_query', 101, 1, '', '', 1, 'F', 'system:role:query', '#', ''),
+       (1011, 'role_add', 101, 2, '', '', 1, 'F', 'system:role:add', '#', ''),
+       (1012, 'role_update', 101, 3, '', '', 1, 'F', 'system:role:update', '#', ''),
+       (1013, 'role_delete', 101, 4, '', '', 1, 'F', 'system:role:delete', '#', ''),
+       (102, 'menu_manager', 1, 3, 'menu', 'menu/index', 1, 'C', 'system:menu:list', 'menu', 'menu manager'),
+       (1020, 'menu_query', 102, 1, '', '', 1, 'F', 'system:menu:query', '#', ''),
+       (1021, 'menu_add', 102, 2, '', '', 1, 'F', 'system:menu:add', '#', ''),
+       (1022, 'menu_update', 102, 3, '', '', 1, 'F', 'system:menu:update', '#', ''),
+       (1023, 'menu_delete', 102, 4, '', '', 1, 'F', 'system:menu:delete', '#', ''),
+       (103, 'cluster_manager', 1, 4, 'cluster', 'cluster/index', 1, 'C', 'system:cluster:list', 'cluster', 'cluster manager'),
+       (1030, 'cluster_query', 103, 1, '', '', 1, 'F', 'system:cluster:query', '#', ''),
+       (1031, 'cluster_add', 103, 2, '', '', 1, 'F', 'system:cluster:add', '#', ''),
+       (1032, 'cluster_update', 103, 3, '', '', 1, 'F', 'system:cluster:update', '#', ''),
+       (1033, 'cluster_delete', 103, 4, '', '', 1, 'F', 'system:cluster:delete', '#', ''),
+       (2, 'metadata', 0, 2, 'metadata', null, 1, 'M', 'metadata', 'metadata', 'metadata root path'),
+       (200, 'catalog_manager', 2, 1, 'catalog', 'catalog/index', 1, 'C', 'metadata:catalog:list', 'catalog', 'catalog manager'),
+       (2000, 'catalog_create', 200, 1, '', '', 1, 'F', 'metadata:catalog:create', '#', ''),
+       (2001, 'catalog_remove', 200, 2, '', '', 1, 'F', 'metadata:catalog:remove', '#', ''),
+       (201, 'database_manager', 2, 2, 'database', 'database/index', 1, 'C', 'metadata:database:list', 'database', 'database manager'),
+       (2010, 'database_create', 201, 1, '', '', 1, 'F', 'metadata:database:create', '#', ''),
+       (2011, 'database_drop', 201, 2, '', '', 1, 'F', 'metadata:database:drop', '#', ''),
+       (202, 'table_manager', 2, 3, 'table', 'table/index', 1, 'C', 'metadata:table:list', 'table', 'table manager'),
+       (2020, 'table_create', 202, 1, '', '', 1, 'F', 'metadata:table:create', '#', ''),
+       (2021, 'table_update', 202, 2, '', '', 1, 'F', 'metadata:table:update', '#', ''),
+       (2022, 'table_drop', 202, 3, '', '', 1, 'F', 'metadata:table:drop', '#', ''),
+       (203, 'column_manager', 2, 4, 'column', 'column/index', 1, 'C', 'metadata:column:list', 'column', 'column manager'),
+       (2030, 'column_add', 203, 1, '', '', 1, 'F', 'metadata:column:add', '#', ''),
+       (2031, 'column_drop', 203, 2, '', '', 1, 'F', 'metadata:column:drop', '#', ''),
+       (204, 'option_manager', 2, 5, 'option', 'option/index', 1, 'C', 'metadata:option:list', 'option', 'option manager'),
+       (2040, 'option_add', 204, 1, '', '', 1, 'F', 'metadata:option:add', '#', ''),
+       (2041, 'option_remove', 204, 2, '', '', 1, 'F', 'metadata:option:remove', '#', ''),
+       (205, 'schema_manager', 2, 6, 'schema', 'schema/index', 1, 'C', 'metadata:schema:list', 'schema', 'schema manager'),
+       (206, 'snapshot_manager', 2, 7, 'snapshot', 'snapshot/index', 1, 'C', 'metadata:snapshot:list', 'snapshot', 'schema manager'),
+       (207, 'manifest_manager', 2, 8, 'manifest', 'manifest/index', 1, 'C', 'metadata:manifest:list', 'manifest', 'manifest manager'),
+       (208, 'datafile_manager', 2, 9, 'datafile', 'datafile/index', 1, 'C', 'metadata:datafile:list', 'datafile', 'datafile manager'),
+       (3, 'cdc', 0, 3, 'cdc', null, 1, 'M', 'cdc', 'cdc', 'cdc root path'),
+       (300, 'cdc_job_manager', 3, 1, 'cdc', 'cdc/index', 1, 'C', 'cdc:job:list', 'cdc', 'cdc job manager'),
+       (3000, 'cdc_job_create', 3, 2, '', '', 1, 'F', 'cdc:job:create', '#', ''),
+       (3001, 'cdc_job_query', 300, 1, '', '', 1, 'F', 'cdc:job:query', '#', ''),
+       (3002, 'cdc_job_update', 300, 2, '', '', 1, 'F', 'cdc:job:update', '#', ''),
+       (3003, 'cdc_job_delete', 300, 3, '', '', 1, 'F', 'cdc:job:delete', '#', ''),
+       (3004, 'cdc_job_submit', 300, 4, '', '', 1, 'F', 'cdc:job:submit', '#', ''),
+       (4, 'playground', 0, 4, 'playground', null, 1, 'M', 'playground', 'playground', 'playground root path'),
+       (400, 'playground_job_manager', 4, 1, 'playground', 'playground/index', 1, 'C', 'playground:job:list', 'playground', 'playground job manager'),
+       (4000, 'playground_job_query', 400, 1, '', '', 1, 'F', 'playground:job:query', '#', ''),
+       (4001, 'playground_job_submit', 4, 2, '', '', 1, 'F', 'playground:job:submit', '#', ''),
+       (4002, 'playground_job_stop', 4, 3, '', '', 1, 'F', 'playground:job:stop', '#', '');
 
 insert into user_role (id, user_id, role_id)
 values (1, 1, 1), (2, 2, 2);
@@ -201,4 +286,52 @@ values (1, 1),
        (1, 1001),
        (1, 1002),
        (1, 1003),
-       (1, 1004);
+       (1, 1004),
+       (1, 101),
+       (1, 1010),
+       (1, 1011),
+       (1, 1012),
+       (1, 1013),
+       (1, 102),
+       (1, 1020),
+       (1, 1021),
+       (1, 1022),
+       (1, 1023),
+       (1, 103),
+       (1, 1030),
+       (1, 1031),
+       (1, 1032),
+       (1, 1033),
+       (1, 2),
+       (1, 200),
+       (1, 2000),
+       (1, 2001),
+       (1, 201),
+       (1, 2010),
+       (1, 2011),
+       (1, 202),
+       (1, 2020),
+       (1, 2021),
+       (1, 2022),
+       (1, 203),
+       (1, 2030),
+       (1, 2031),
+       (1, 204),
+       (1, 2040),
+       (1, 2041),
+       (1, 205),
+       (1, 206),
+       (1, 207),
+       (1, 208),
+       (1, 3),
+       (1, 300),
+       (1, 3000),
+       (1, 3001),
+       (1, 3002),
+       (1, 3003),
+       (1, 3004),
+       (1, 4),
+       (1, 400),
+       (1, 4000),
+       (1, 4001),
+       (1, 4002);

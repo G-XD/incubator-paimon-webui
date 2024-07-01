@@ -15,39 +15,77 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License. */
 
+import type * as monaco from 'monaco-editor'
+import { format } from 'sql-formatter'
+import dayjs from 'dayjs'
+import EditorDebugger from '../debugger'
 import styles from './index.module.scss'
-import ContextMenu from '@/components/context-menu';
+import ContextMenu from '@/components/context-menu'
+import { useJobStore } from '@/store/job'
+import MonacoEditor from '@/components/monaco-editor'
+import EditorConsole from '@/views/playground/components/query/components/console'
 
 export default defineComponent({
   name: 'EditorTabs',
   setup() {
-    const { mittBus }  = getCurrentInstance()!.appContext.config.globalProperties
+    const message = useMessage()
+    const jobStore = useJobStore()
+    const { mittBus } = getCurrentInstance()!.appContext.config.globalProperties
+    const editorSize = ref(0.6)
+    const menuTreeRef = ref()
 
     const tabVariables = reactive({
       chooseTab: '',
       panelsList: [] as any,
-      row: {} as any
+      row: {} as any,
     })
 
+    const editorVariables = reactive({
+      editor: {} as any,
+      language: 'sql',
+    })
+
+    const editorMounted = (editor: monaco.editor.IStandaloneCodeEditor) => {
+      editorVariables.editor = editor
+    }
+
+    const handleFormat = () => {
+      toRaw(editorVariables.editor).setValue(format(toRaw(editorVariables.editor).getValue()))
+    }
+
+    const editorSave = () => {
+      message.success('Save success')
+      tabVariables.panelsList.find((item: any) => item.key === tabVariables.chooseTab).content = toRaw(editorVariables.editor).getValue()
+      handleFormat()
+      tabVariables.panelsList.find((item: any) => item.key === tabVariables.chooseTab).isSaved = true
+      menuTreeRef.value && menuTreeRef.value?.onLoadRecordData()
+    }
+
+    const handleContentChange = (value: string) => {
+      tabVariables.panelsList.find((item: any) => item.key === tabVariables.chooseTab).content = value
+      tabVariables.panelsList.find((item: any) => item.key === tabVariables.chooseTab).isSaved = false
+    }
+
     const handleAdd = () => {
+      const timestamp = dayjs().format('YYYY-MM-DD HH:mm:ss')
       tabVariables.panelsList.push({
-        tableName: 'test' + (tabVariables.panelsList.length + 1),
-        key: 'test' + (tabVariables.panelsList.length + 1),
+        tableName: timestamp,
+        key: timestamp,
         isSaved: false,
-        content: ''
+        content: '',
       })
-      tabVariables.chooseTab = 'test' + tabVariables.panelsList.length
+      tabVariables.chooseTab = timestamp
     }
 
     const handleClose = (key: any) => {
       const index = tabVariables.panelsList.findIndex((item: any) => item.key === key)
       tabVariables.panelsList.splice(index, 1)
       if (key === tabVariables.chooseTab) {
-        if (tabVariables.panelsList[index - 1]) {
+        if (tabVariables.panelsList[index - 1])
           tabVariables.chooseTab = tabVariables.panelsList[index - 1].key
-        } else {
+        else
           tabVariables.chooseTab = tabVariables.panelsList[index]?.key || ''
-        }
+        jobStore.removeJob(key)
       }
     }
 
@@ -64,7 +102,7 @@ export default defineComponent({
     const contextMenuVariables = reactive({
       x: 0,
       y: 0,
-      isShow: false
+      isShow: false,
     })
 
     const openContextMenu = (e: MouseEvent, item: any) => {
@@ -81,16 +119,16 @@ export default defineComponent({
       switch (keys) {
         case 'close_left':
           tabVariables.panelsList.splice(0, index)
-          break;
+          break
         case 'close_right':
           tabVariables.panelsList.splice(index + 1)
-          break;
+          break
         case 'close_others':
           tabVariables.panelsList = [tabVariables.row]
-          break;
+          break
         case 'close_all':
           tabVariables.panelsList = []
-          break;
+          break
       }
       contextMenuVariables.isShow = false
     }
@@ -99,14 +137,48 @@ export default defineComponent({
       mittBus.emit('initTabData', tabVariables)
     })
 
+    const handleConsoleUp = () => {
+      editorSize.value = 0
+      mittBus.emit('editorResized')
+    }
+    const handleConsoleDown = () => {
+      editorSize.value = 0.6
+      mittBus.emit('editorResized')
+    }
+    const showConsole = ref(true)
+    const handleConsoleClose = () => {
+      editorSize.value = 0.98
+      showConsole.value = false
+    }
+    const handleDragEnd = () => {
+      mittBus.emit('editorResized')
+      mittBus.emit('resizeLog')
+    }
+    mittBus.on('reloadLayout', () => {
+      editorSize.value = 0.6
+      showConsole.value = true
+    })
+
     return {
       ...toRefs(tabVariables),
+      ...toRefs(editorVariables),
       handleAdd,
       handleClose,
       changeTreeChoose,
       openContextMenu,
       ...toRefs(contextMenuVariables),
-      handleContextMenuSelect
+      handleContextMenuSelect,
+      editorSize,
+      tabVariables,
+      handleDragEnd,
+      editorMounted,
+      editorSave,
+      showConsole,
+      handleContentChange,
+      handleConsoleUp,
+      handleConsoleDown,
+      handleConsoleClose,
+      handleFormat,
     }
   },
   render() {
@@ -117,18 +189,21 @@ export default defineComponent({
           type="card"
           addable
           closable
+          style={{ height: '100%', width: '100%' }}
           tab-style="min-width: 160px;"
+          pane-style="padding-top: 0; height: 100%; width: 100%"
           on-close={this.handleClose}
           on-add={this.handleAdd}
           on-update:value={this.changeTreeChoose}
           v-slots={{
             prefix: () => '',
-            suffix: () => ''
+            suffix: () => '',
           }}
         >
           {
             this.panelsList.map((item: any) => (
-              <n-tab-pane name={item.key}
+              <n-tab-pane
+                name={item.key}
                 v-slots={{
                   tab: () => (
                     <div class={styles.tabs} onContextmenu={(e: MouseEvent) => this.openContextMenu(e, item)}>
@@ -136,9 +211,50 @@ export default defineComponent({
                       <div>{item.tableName}</div>
                       {!item.isSaved && <div class={styles.asterisk}>*</div>}
                     </div>
-                  )
+                  ),
+                  default: () => [
+                    <div class={styles.debugger}>
+                      <EditorDebugger tabData={this.tabVariables} onHandleFormat={this.handleFormat} onHandleSave={this.editorSave} />
+                    </div>,
+                    <div style={{ display: 'flex', flex: 1, flexDirection: 'column', maxHeight: 'calc(100vh - 177px)', height: 'calc(100vh - 177px)' }}>
+                      <n-split direction="vertical" max={0.6} min={0.00} resize-trigger-size={0} v-model:size={this.editorSize} on-drag-end={this.handleDragEnd}>
+                        {{
+                          '1': () => (
+                            <div class={styles.editor}>
+                              <n-card content-style="height: 100%;padding: 0;">
+                                <MonacoEditor
+                                  v-model={this.tabVariables.panelsList.find((item: any) => item.key === this.tabVariables.chooseTab).content}
+                                  language={this.language}
+                                  onEditorMounted={this.editorMounted}
+                                  onEditorSave={this.editorSave}
+                                  onChange={this.handleContentChange}
+                                />
+                              </n-card>
+                            </div>
+                          ),
+                          '2': () => (this.showConsole && (
+                            <div class={styles.console}>
+                              <n-card content-style="height: 100%;padding: 0;">
+                                <EditorConsole
+                                  onConsoleDown={this.handleConsoleDown}
+                                  onConsoleUp={this.handleConsoleUp}
+                                  onConsoleClose={this.handleConsoleClose}
+                                  tabData={this.tabVariables}
+                                />
+                              </n-card>
+                            </div>
+                          )
+                          ),
+                          'resize-trigger': () => (
+                            <div class={styles['console-splitter']} />
+                          ),
+                        }}
+                      </n-split>
+                    </div>,
+                  ],
                 }}
-              ></n-tab-pane>
+              >
+              </n-tab-pane>
             ))
           }
         </n-tabs>
@@ -151,6 +267,6 @@ export default defineComponent({
           onSelect={this.handleContextMenuSelect}
         />
       </div>
-    );
-  }
-});
+    )
+  },
+})

@@ -15,12 +15,12 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License. */
 
-import { LANGUAGES } from "@/locales"
-import type { Menu, NavBar, Theme } from "./type"
+import type { Menu, NavBar, Theme } from './type'
+import { LANGUAGES } from '@/locales'
 
 export const useConfigStore = defineStore({
   id: 'config',
-  state: (): { theme: Theme, locale: LANGUAGES, navActive: NavBar, menuActive: Menu } => ({
+  state: (): { theme: Theme, locale: LANGUAGES, navActive: NavBar | null, menuActive: Menu } => ({
     theme: 'light',
     locale: LANGUAGES.ZH,
     navActive: 'playground',
@@ -34,12 +34,12 @@ export const useConfigStore = defineStore({
     getCurrentTheme(): Theme {
       return this.theme
     },
-    getCurrentNavActive(): NavBar {
+    getCurrentNavActive(): NavBar | null {
       return this.navActive
     },
     getCurrentMenuActive(): Menu {
       return this.menuActive
-    }
+    },
   },
   actions: {
     setCurrentLocale(locale: LANGUAGES): void {
@@ -48,11 +48,11 @@ export const useConfigStore = defineStore({
     setCurrentTheme(theme: Theme): void {
       this.theme = theme
     },
-    setCurrentNavActive(navActive: NavBar ): void {
+    setCurrentNavActive(navActive: NavBar | null): void {
       this.navActive = navActive
     },
     setCurrentMenuActive(menuActive: Menu): void {
       this.menuActive = menuActive
-    }
-  }
+    },
+  },
 })

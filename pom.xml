@@ -23,6 +23,7 @@ under the License.
     <modelVersion>4.0.0</modelVersion>
 
     <modules>
+        <module>paimon-web-dist</module>
         <module>paimon-web-ui</module>
         <module>paimon-web-server</module>
         <module>paimon-web-common</module>
@@ -115,9 +116,7 @@ under the License.
         <sa-token.version>1.35.0.RC</sa-token.version>
         <common-lang3.version>3.12.0</common-lang3.version>
         <common-io.version>2.7</common-io.version>
-        <hutool.version>5.8.11</hutool.version>
         <gson.version>2.10.1</gson.version>
-        <auto-service.version>1.0.1</auto-service.version>
     </properties>
 
     <dependencyManagement>
@@ -147,12 +146,6 @@ under the License.
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>${guava.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>cn.hutool</groupId>
-                <artifactId>hutool-all</artifactId>
-                <version>${hutool.version}</version>
             </dependency>
 
             <dependency>
@@ -225,13 +218,6 @@ under the License.
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-ui</artifactId>
                 <version>${springdoc-openapi-ui.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.google.auto.service</groupId>
-                <artifactId>auto-service</artifactId>
-                <version>${auto-service.version}</version>
-                <scope>provided</scope>
             </dependency>
 
             <dependency>
@@ -387,6 +373,7 @@ under the License.
                         <exclude>release/**</exclude>
                         <exclude>paimon-web-ui/node_modules/**</exclude>
                         <exclude>paimon-web-ui/dist/**</exclude>
+                        <exclude>paimon-web-ui/licenses/**</exclude>
                     </excludes>
                 </configuration>
             </plugin>

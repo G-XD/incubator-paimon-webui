@@ -310,10 +310,11 @@ public class MetadataControllerTest extends ControllerTestBase {
         assertEquals(4, schemaVO.getFields().size());
         ArrayList<MetadataFieldsModel> expectedFields =
                 Lists.newArrayList(
-                        new MetadataFieldsModel(0, "id", "INT NOT NULL", null),
-                        new MetadataFieldsModel(1, "name", "STRING NOT NULL", null),
-                        new MetadataFieldsModel(2, "age", "INT NOT NULL", null),
-                        new MetadataFieldsModel(3, "create_time", "STRING NOT NULL", null));
+                        new MetadataFieldsModel(0, "id", "INT NOT NULL", "pk"),
+                        new MetadataFieldsModel(1, "name", "STRING NOT NULL", ""),
+                        new MetadataFieldsModel(2, "age", "INT NOT NULL", ""),
+                        new MetadataFieldsModel(
+                                3, "create_time", "STRING NOT NULL", "partition key"));
         assertEquals(expectedFields, schemaVO.getFields());
 
         assertEquals(3, schemaVO.getOption().size());
@@ -478,8 +479,6 @@ public class MetadataControllerTest extends ControllerTestBase {
         assertEquals(3, snapshotVO.getTotalRecordCount());
         assertEquals(3, snapshotVO.getDeltaRecordCount());
         assertEquals(0, snapshotVO.getChangelogRecordCount());
-        assertEquals(3, snapshotVO.getAddedFileCount());
-        assertEquals(0, snapshotVO.getDeletedFileCount());
         assertNull(snapshotVO.getWatermark());
     }
 

@@ -15,50 +15,81 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License. */
 
+import { KeepAlive } from 'vue'
 import NavBar from './components/topbar'
 import styles from './index.module.scss'
 import SideBar from './components/sidebar'
 import { useData } from './use-data'
 import { useConfigStore } from '@/store/config'
+import { usePermissionStore } from '@/store/permission'
+import { useUserStore } from '@/store/user'
 
 export default defineComponent({
   name: 'ContentPage',
   setup() {
+    const permissionStore = usePermissionStore()
     const configStore = useConfigStore()
+    const userStore = useUserStore()
     const { menuOptions, state } = useData()
+    const isAdmin = userStore.getAdmin
+    const userMenus = userStore.getMenus
+    const userDirectories = userStore.getDiresctoies
+    const showDirectories = ref(menuOptions.value?.filter(e => isAdmin || userDirectories.includes(e.menuName)))
     const getSideOption = (state: any) => {
       const activeNavKey = configStore.getCurrentNavActive
-      state.sideMenuOptions = menuOptions.value.find((m: any) => m.key === activeNavKey)?.sideMenuOptions || []
+      state.sideMenuOptions = showDirectories.value.find((m: any) => m.key === activeNavKey)?.sideMenuOptions?.filter((e) => {
+        return isAdmin || userMenus?.includes(e.menuName)
+      }) || []
       state.isShowSided = state.sideMenuOptions && state.sideMenuOptions.length
     }
+
+    onMounted(permissionStore.getPermissionList)
+
     getSideOption(state)
+
     watch(
       () => configStore.getCurrentNavActive,
-      () => { getSideOption(state)})
+      () => {
+        getSideOption(state)
+      },
+    )
+
     return {
       ...toRefs(state),
-      menuOptions
+      showDirectories,
     }
   },
   render() {
     return (
-      <div class={styles['container']}>
-        <n-layout style='height: 100%'>
+      <div class={styles.container}>
+        <n-layout style="height: 100%">
           <n-layout-header style="height: 64px;" bordered>
-            <NavBar headerMenuOptions={this.menuOptions}></NavBar>
+            <NavBar headerMenuOptions={this.showDirectories}></NavBar>
           </n-layout-header>
-          <n-layout has-sider position='absolute' style='top: 64px'>
-            {this.isShowSided ? (
-              <SideBar
-                sideMenuOptions={this.sideMenuOptions}
-              />
-            ) : null}
+          <n-layout has-sider position="absolute" style="top: 64px">
+            {
+              this.isShowSided && (
+                <SideBar
+                  sideMenuOptions={this.sideMenuOptions}
+                />
+              )
+            }
             <n-layout-content content-style="height: calc(100vh - 64px);">
-              <router-view />
+              <router-view v-slots={{
+                default: (props: any) => {
+                  const Comp = props.Component
+                  return (
+                    <KeepAlive>
+                      <Comp />
+                    </KeepAlive>
+                  )
+                },
+              }}
+              />
             </n-layout-content>
           </n-layout>
         </n-layout>
       </div>
     )
-  }
+  },
 })

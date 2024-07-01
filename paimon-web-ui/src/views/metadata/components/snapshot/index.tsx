@@ -15,10 +15,10 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License. */
 
-import { type DataTableColumns } from 'naive-ui'
+import type { DataTableColumns } from 'naive-ui'
 import dayjs from 'dayjs'
 
-import { getSnapshot, type Snapshot } from '@/api/models/catalog'
+import { type Snapshot, getSnapshot } from '@/api/models/catalog'
 import { useCatalogStore } from '@/store/catalog'
 
 export default defineComponent({
@@ -31,33 +31,78 @@ export default defineComponent({
     const columns: DataTableColumns<Snapshot> = [
       {
         title: 'Snapshot ID',
-        key: 'snapshotId'
+        key: 'snapshotId',
+        width: 120,
       },
       {
         title: 'Schema ID',
-        key: 'schemaId'
+        key: 'schemaId',
+        width: 120,
+      },
+      {
+        title: 'Commit User',
+        key: 'commitUser',
+        width: 330,
       },
       {
         title: 'Commit Identifier',
-        key: 'commitIdentifier'
+        key: 'commitIdentifier',
+        width: 170,
       },
 
       {
         title: 'Commit Kind',
-        key: 'commitKind'
+        key: 'commitKind',
+        width: 140,
       },
       {
         title: 'Commit Time',
         key: 'commitTime',
+        width: 190,
         render: (row) => {
           return dayjs(row.commitTime).format('YYYY-MM-DD HH:mm:ss')
-        }
-      }
+        },
+      },
+      {
+        title: 'Base Manifest List',
+        key: 'baseManifestList',
+        width: 430,
+      },
+      {
+        title: 'Delta Manifest List',
+        key: 'deltaManifestList',
+        width: 430,
+      },
+      {
+        title: 'Changelog Manifest List',
+        key: 'changelogManifestList',
+        width: 430,
+      },
+      {
+        title: 'Total Record Count',
+        key: 'totalRecordCount',
+        width: 170,
+      },
+      {
+        title: 'Delta Record Count',
+        key: 'deltaRecordCount',
+        width: 170,
+      },
+      {
+        title: 'Changelog Record Count',
+        key: 'changelogRecordCount',
+        width: 210,
+      },
+      {
+        title: 'Watermark',
+        key: 'watermark',
+        width: 220,
+      },
     ]
 
     const onFetchData = async () => {
       useSnapshot({
-        params: catalogStore.currentTable
+        params: catalogStore.currentTable,
       })
     }
 
@@ -78,9 +123,11 @@ export default defineComponent({
           <n-data-table
             columns={this.columns}
             data={this.snapshots || []}
+            max-height="calc(100vh - 280px)"
+            scroll-x="3200px"
           />
         </n-spin>
       </n-card>
-    );
+    )
   },
-});
+})

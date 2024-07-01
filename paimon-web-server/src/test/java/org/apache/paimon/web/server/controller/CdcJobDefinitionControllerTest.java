@@ -18,10 +18,15 @@
 
 package org.apache.paimon.web.server.controller;
 
+import org.apache.paimon.web.api.enums.FlinkCdcSyncType;
 import org.apache.paimon.web.server.data.dto.CdcJobDefinitionDTO;
+import org.apache.paimon.web.server.data.dto.CdcJobSubmitDTO;
+import org.apache.paimon.web.server.data.dto.LoginDTO;
 import org.apache.paimon.web.server.data.model.CdcJobDefinition;
+import org.apache.paimon.web.server.data.model.ClusterInfo;
 import org.apache.paimon.web.server.data.result.PageR;
 import org.apache.paimon.web.server.data.result.R;
+import org.apache.paimon.web.server.data.vo.UserInfoVO;
 import org.apache.paimon.web.server.util.ObjectMapperUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -50,7 +55,25 @@ public class CdcJobDefinitionControllerTest extends ControllerTestBase {
     private CdcJobDefinitionDTO cdcJobDefinitionDto() {
         CdcJobDefinitionDTO cdcJobDefinitionDTO = new CdcJobDefinitionDTO();
         cdcJobDefinitionDTO.setName("1");
-        cdcJobDefinitionDTO.setCdcType(0);
+        cdcJobDefinitionDTO.setCdcType(FlinkCdcSyncType.SINGLE_TABLE_SYNC.getValue());
+        cdcJobDefinitionDTO.setDescription("d");
+        cdcJobDefinitionDTO.setCreateUser("admin");
+        return cdcJobDefinitionDTO;
+    }
+
+    private CdcJobDefinitionDTO cdcDatabaseSyncJobDefinitionDto() {
+        CdcJobDefinitionDTO cdcJobDefinitionDTO = new CdcJobDefinitionDTO();
+        cdcJobDefinitionDTO.setName("2");
+        cdcJobDefinitionDTO.setCdcType(FlinkCdcSyncType.ALL_DATABASES_SYNC.getValue());
+        cdcJobDefinitionDTO.setDescription("d");
+        cdcJobDefinitionDTO.setCreateUser("admin");
+        return cdcJobDefinitionDTO;
+    }
+
+    private CdcJobDefinitionDTO cdcJobDefinitionDtoForSearch() {
+        CdcJobDefinitionDTO cdcJobDefinitionDTO = new CdcJobDefinitionDTO();
+        cdcJobDefinitionDTO.setName("21");
+        cdcJobDefinitionDTO.setCdcType(1);
         cdcJobDefinitionDTO.setConfig("d");
         cdcJobDefinitionDTO.setDescription("d");
         return cdcJobDefinitionDTO;
@@ -59,18 +82,8 @@ public class CdcJobDefinitionControllerTest extends ControllerTestBase {
     @Test
     @Order(1)
     public void testCreateCdcJob() throws Exception {
-        MockHttpServletResponse response =
-                mockMvc.perform(
-                                MockMvcRequestBuilders.post(cdcJobDefinitionPath + "/create")
-                                        .cookie(cookie)
-                                        .content(ObjectMapperUtils.toJSON(cdcJobDefinitionDto()))
-                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
-                                        .accept(MediaType.APPLICATION_JSON_VALUE))
-                        .andExpect(MockMvcResultMatchers.status().isOk())
-                        .andDo(MockMvcResultHandlers.print())
-                        .andReturn()
-                        .getResponse();
-        checkMvcResult(response, 200);
+        testCreateCdcJob(cdcJobDefinitionDto());
+        checkCdcJobDefinitionAndSaSession();
     }
 
     @Test
@@ -120,5 +133,172 @@ public class CdcJobDefinitionControllerTest extends ControllerTestBase {
         assertEquals(realRdcJobDefinition.getName(), cdcJobDefinition.getName());
         assertEquals(realRdcJobDefinition.getDescription(), cdcJobDefinition.getDescription());
         assertEquals(realRdcJobDefinition.getConfig(), cdcJobDefinition.getConfig());
+        assertEquals(realRdcJobDefinition.getCreateUser(), cdcJobDefinition.getCreateUser());
+    }
+
+    @Order(3)
+    @Test
+    public void testSearchCdcJobDefinition() throws Exception {
+        testCreateCdcJob(cdcJobDefinitionDtoForSearch());
+        MockHttpServletResponse listAllResponse =
+                mockMvc.perform(
+                                MockMvcRequestBuilders.get(cdcJobDefinitionPath + "/list")
+                                        .cookie(cookie)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                        .accept(MediaType.APPLICATION_JSON_VALUE)
+                                        .param("currentPage", "1")
+                                        .param("pageSize", "10")
+                                        .param("withConfig", "true"))
+                        .andExpect(MockMvcResultMatchers.status().isOk())
+                        .andDo(MockMvcResultHandlers.print())
+                        .andReturn()
+                        .getResponse();
+        PageR<CdcJobDefinition> result =
+                getPageR(listAllResponse, new TypeReference<PageR<CdcJobDefinition>>() {});
+        assertEquals(2, result.getTotal());
+        long searchNum1 = getSearchNum("1");
+        assertEquals(2, searchNum1);
+        long searchNum2 = getSearchNum("21");
+        assertEquals(1, searchNum2);
+    }
+
+    private void testCreateCdcJob(CdcJobDefinitionDTO obj) throws Exception {
+        MockHttpServletResponse response =
+                mockMvc.perform(
+                                MockMvcRequestBuilders.post(cdcJobDefinitionPath + "/create")
+                                        .cookie(cookie)
+                                        .content(ObjectMapperUtils.toJSON(obj))
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                        .accept(MediaType.APPLICATION_JSON_VALUE))
+                        .andExpect(MockMvcResultMatchers.status().isOk())
+                        .andDo(MockMvcResultHandlers.print())
+                        .andReturn()
+                        .getResponse();
+        checkMvcResult(response, 200);
+    }
+
+    private long getSearchNum(String searchJobName) throws Exception {
+        MockHttpServletResponse searchResponse =
+                mockMvc.perform(
+                                MockMvcRequestBuilders.get(cdcJobDefinitionPath + "/list")
+                                        .cookie(cookie)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                        .accept(MediaType.APPLICATION_JSON_VALUE)
+                                        .param("jobName", searchJobName)
+                                        .param("currentPage", "1")
+                                        .param("pageSize", "10")
+                                        .param("withConfig", "true"))
+                        .andExpect(MockMvcResultMatchers.status().isOk())
+                        .andDo(MockMvcResultHandlers.print())
+                        .andReturn()
+                        .getResponse();
+        PageR<CdcJobDefinition> searchResult =
+                getPageR(searchResponse, new TypeReference<PageR<CdcJobDefinition>>() {});
+        return searchResult.getTotal();
+    }
+
+    @Order(4)
+    @Test
+    public void submitCdcJob() throws Exception {
+        System.setProperty("FLINK_HOME", "/opt/flink");
+        System.setProperty("ACTION_JAR_PATH", "/opt/flink/jar");
+        ClusterInfo cluster = new ClusterInfo();
+        cluster.setId(1);
+        cluster.setClusterName("clusterName");
+        cluster.setHost("127.0.0.1");
+        cluster.setPort(8083);
+        cluster.setType("Flink");
+        cluster.setEnabled(true);
+        mockMvc.perform(
+                        MockMvcRequestBuilders.post("/api/cluster")
+                                .cookie(cookie)
+                                .content(ObjectMapperUtils.toJSON(cluster))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .accept(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andDo(MockMvcResultHandlers.print());
+        CdcJobDefinitionDTO cdcJobDefinitionDTO = cdcJobDefinitionDto();
+        CdcJobSubmitDTO cdcJobSubmitDTO = new CdcJobSubmitDTO();
+        cdcJobSubmitDTO.setClusterId("1");
+        mockMvc.perform(
+                        MockMvcRequestBuilders.get(
+                                        cdcJobDefinitionPath + "/" + cdcJobDefinitionDTO.getId())
+                                .cookie(cookie)
+                                .accept(MediaType.APPLICATION_JSON_VALUE)
+                                .content(ObjectMapperUtils.toJSON(cdcJobSubmitDTO))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andDo(MockMvcResultHandlers.print())
+                .andReturn()
+                .getResponse();
+    }
+
+    @Order(4)
+    @Test
+    public void submitDatabaseSyncCdcJob() throws Exception {
+        System.setProperty("FLINK_HOME", "/opt/flink");
+        System.setProperty("ACTION_JAR_PATH", "/opt/flink/jar");
+        ClusterInfo cluster = new ClusterInfo();
+        cluster.setId(2);
+        cluster.setClusterName("clusterName");
+        cluster.setHost("127.0.0.1");
+        cluster.setPort(8083);
+        cluster.setType("Flink");
+        cluster.setEnabled(true);
+        mockMvc.perform(
+                        MockMvcRequestBuilders.post("/api/cluster")
+                                .cookie(cookie)
+                                .content(ObjectMapperUtils.toJSON(cluster))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                .accept(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andDo(MockMvcResultHandlers.print());
+        CdcJobDefinitionDTO cdcJobDefinitionDTO = cdcDatabaseSyncJobDefinitionDto();
+        CdcJobSubmitDTO cdcJobSubmitDTO = new CdcJobSubmitDTO();
+        cdcJobSubmitDTO.setClusterId("2");
+        mockMvc.perform(
+                        MockMvcRequestBuilders.get(
+                                        cdcJobDefinitionPath + "/" + cdcJobDefinitionDTO.getId())
+                                .cookie(cookie)
+                                .accept(MediaType.APPLICATION_JSON_VALUE)
+                                .content(ObjectMapperUtils.toJSON(cdcJobSubmitDTO))
+                                .contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andDo(MockMvcResultHandlers.print())
+                .andReturn()
+                .getResponse();
+    }
+
+    private void checkCdcJobDefinitionAndSaSession() throws Exception {
+        MockHttpServletResponse getCdcJobDefinitionResponse =
+                mockMvc.perform(
+                                MockMvcRequestBuilders.get(cdcJobDefinitionPath + "/" + 1)
+                                        .cookie(cookie)
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                        .accept(MediaType.APPLICATION_JSON_VALUE))
+                        .andExpect(MockMvcResultMatchers.status().isOk())
+                        .andDo(MockMvcResultHandlers.print())
+                        .andReturn()
+                        .getResponse();
+        R<CdcJobDefinition> getResult =
+                getR(getCdcJobDefinitionResponse, new TypeReference<R<CdcJobDefinition>>() {});
+        LoginDTO login = new LoginDTO();
+        login.setUsername("admin");
+        login.setPassword("admin");
+        MockHttpServletResponse getLoginUserResponse =
+                mockMvc.perform(
+                                MockMvcRequestBuilders.post("/api/login")
+                                        .content(ObjectMapperUtils.toJSON(login))
+                                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                                        .accept(MediaType.APPLICATION_JSON_VALUE))
+                        .andExpect(MockMvcResultMatchers.status().isOk())
+                        .andDo(MockMvcResultHandlers.print())
+                        .andReturn()
+                        .getResponse();
+        R<UserInfoVO> getLoginuser =
+                getR(getLoginUserResponse, new TypeReference<R<UserInfoVO>>() {});
+        assertEquals(
+                getResult.getData().getCreateUser(),
+                getLoginuser.getData().getUser().getUsername());
     }
 }

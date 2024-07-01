@@ -17,31 +17,29 @@ under the License. */
 
 import { Add } from '@vicons/ionicons5'
 
-import { useCatalogStore } from '@/store/catalog'
-import { createTable, type TableDTO } from '@/api/models/catalog'
-import { transformOption } from '@/views/metadata/constant'
-
 import OptionContent, { newOption } from '../options-form-content'
 import ColumnFormContent, { newField } from '../table-column-content'
-
 import styles from './index.module.scss'
+import { useCatalogStore } from '@/store/catalog'
+import { type TableDTO, createTable } from '@/api/models/catalog'
+import { transformOption } from '@/views/metadata/constant'
 
 const props = {
   catalogId: {
     type: Number as PropType<number>,
-    require: true
+    require: true,
   },
   catalogName: {
     type: String as PropType<string>,
-    require: true
+    require: true,
   },
   databaseName: {
     type: String as PropType<string>,
-    require: true
-  }
+    require: true,
+  },
 }
 
-const resetFormValue = () => {
+function resetFormValue(): TableDTO {
   return {
     name: '',
     tableColumns: [
@@ -49,14 +47,14 @@ const resetFormValue = () => {
         field: '',
         dataType: {
           nullable: true,
-          type: undefined
+          type: undefined,
         },
         comment: '',
         defaultValue: '',
-        pk: false
-      }
+        pk: false,
+      },
     ],
-    options: []
+    options: [],
   }
 }
 
@@ -78,11 +76,11 @@ export default defineComponent({
 
     const tableKeys = computed(() => {
       return formValue.value
-        .tableColumns!.filter((item) => Boolean(item.field))
+        .tableColumns!.filter(item => Boolean(item.field))
         .map((item) => {
           return {
             label: item.field,
-            value: item.field
+            value: item.field,
           }
         })
     })
@@ -93,8 +91,8 @@ export default defineComponent({
       await createFetch({
         params: {
           ...toRaw(props),
-          ...transformOption(toRaw(formValue.value))
-        }
+          ...transformOption(toRaw(formValue.value)),
+        },
       })
 
       handleCloseModal()
@@ -108,7 +106,7 @@ export default defineComponent({
       showModal.value = true
     }
 
-    const handleCloseModal = () => {
+    function handleCloseModal() {
       showModal.value = false
       formValue.value = resetFormValue()
     }
@@ -135,7 +133,7 @@ export default defineComponent({
       handleCloseModal,
       handleConfirm,
       handleAddOption,
-      handleAddColumn
+      handleAddColumn,
     }
   },
   render() {
@@ -147,7 +145,7 @@ export default defineComponent({
           </n-icon>
         </n-button>
         <n-modal v-model:show={this.showModal} mask-closable={false}>
-          <n-card bordered={false} title={this.t('metadata.create_table')} style="width: 1100px">
+          <n-card bordered={false} title={this.t('metadata.create_table')} style="width: 1110px">
             {{
               default: () => (
                 <n-form ref="formRef" rules={this.rules} model={this.formValue}>
@@ -156,7 +154,7 @@ export default defineComponent({
                     rule={{
                       required: true,
                       message: 'Name is required',
-                      trigger: ['input', 'blur']
+                      trigger: ['input', 'blur'],
                     }}
                     label={this.t('metadata.table_name')}
                     path="name"
@@ -176,10 +174,7 @@ export default defineComponent({
                     </n-button>
                   </n-space>
                   <ColumnFormContent
-                    onUpdateColumns={(value) => {
-                      this.formValue.tableColumns = value
-                    }}
-                    data={this.formValue.tableColumns}
+                    v-model:modelValue={this.formValue.tableColumns}
                   />
                   <div class={styles.form_title}>{this.t('metadata.partition_columns')}</div>
                   <n-form-item showLabel={false} path="type">
@@ -213,11 +208,11 @@ export default defineComponent({
                     {this.t('layout.confirm')}
                   </n-button>
                 </n-space>
-              )
+              ),
             }}
           </n-card>
         </n-modal>
       </>
     )
-  }
+  },
 })

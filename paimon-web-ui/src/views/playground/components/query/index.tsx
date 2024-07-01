@@ -15,124 +15,176 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License. */
 
+import { onMounted } from 'vue'
 import styles from './index.module.scss'
-import MenuTree from './components/menu-tree';
-import EditorTabs from './components/tabs';
-import EditorDebugger from './components/debugger';
-import * as monaco from 'monaco-editor'
-import MonacoEditor from '@/components/monaco-editor';
-import EditorConsole from './components/console';
-import { format } from 'sql-formatter';
-import { useMessage } from 'naive-ui'
+import MenuTree from './components/menu-tree'
+import EditorTabs from './components/tabs'
+import { useJobStore } from '@/store/job'
+import { getLogs, refreshJobStatus } from '@/api/models/job'
+import { createSession } from '@/api/models/session'
+import type { ExecutionMode, JobDetails } from '@/store/job/type'
 
 export default defineComponent({
   name: 'QueryPage',
   setup() {
-    const message = useMessage()
+    const jobStore = useJobStore()
+    const { mittBus } = getCurrentInstance()!.appContext.config.globalProperties
 
-    const editorVariables = reactive({
-      editor: {} as any,
-      language: 'sql'
+    const tabData = ref({
+      panelsList: [],
+      chooseTab: null,
+    }) as any
+    const currentKey = computed(() => {
+      const currentTab = tabData.value.panelsList.find((item: any) => item.key === tabData.value.chooseTab)
+      return currentTab ? currentTab.key : null
     })
-
-    const editorMounted = (editor: monaco.editor.IStandaloneCodeEditor) => {
-      editorVariables.editor = editor
-    }
-
-    const handleFormat = () => {
-      toRaw(editorVariables.editor).setValue(format(toRaw(editorVariables.editor).getValue()))
-    }
-
-    const editorSave = () => {
-      message.success('Save success')
-      tabData.value.panelsList.find((item: any) => item.key === tabData.value.chooseTab).content = toRaw(editorVariables.editor).getValue()
-      handleFormat()
-      tabData.value.panelsList.find((item: any) => item.key === tabData.value.chooseTab).isSaved = true
-    }
-
-    const handleContentChange = (value: string) => {
-      tabData.value.panelsList.find((item: any) => item.key === tabData.value.chooseTab).content = value
-      tabData.value.panelsList.find((item: any) => item.key === tabData.value.chooseTab).isSaved = false
-    }
-
-    const consoleHeightType = ref('down')
-
-    const handleConsoleUp = (type: string) => {
-      consoleHeightType.value = type
-    }
-
-    const handleConsoleDown = (type: string) => {
-      consoleHeightType.value = type
-    }
-
-
-    watch(
-      () => consoleHeightType.value,
-      () => {
-        if (tabData.value.panelsList?.length > 0) {
-          editorVariables.editor?.layout()
-        }
-      }
-    )
+    const currentJob = computed(() => jobStore.getCurrentJob(currentKey.value))
 
     // mitt - handle tab choose
-    const tabData = ref({}) as any
-    const { mittBus }  = getCurrentInstance()!.appContext.config.globalProperties
     mittBus.on('initTabData', (data: any) => {
       tabData.value = data
     })
 
+    let getJobLogsIntervalId: number | undefined
+    const getJobLog = () => {
+      getJobLogsIntervalId = setInterval(async () => {
+        const response = await getLogs()
+        jobStore.setJobLog(response.data)
+      }, 1000)
+    }
+
+    let createSessionIntervalId: number | undefined
+    watch(currentJob, (newJob) => {
+      if (newJob && createSessionIntervalId === undefined) {
+        createSessionIntervalId = setInterval(() => {
+          createSession()
+        }, 300000)
+      }
+
+      if (!newJob && createSessionIntervalId !== undefined) {
+        clearInterval(createSessionIntervalId)
+        createSessionIntervalId = undefined
+      }
+    })
+
+    let refreshJobStatusIntervalId: number | undefined
+    watch(currentJob, (newJob) => {
+      if (newJob && refreshJobStatusIntervalId === undefined) {
+        refreshJobStatusIntervalId = setInterval(() => {
+          refreshJobStatus()
+        }, 1000)
+      }
+
+      if (!newJob && refreshJobStatusIntervalId !== undefined) {
+        clearInterval(refreshJobStatusIntervalId)
+        refreshJobStatusIntervalId = undefined
+      }
+    })
+
+    // get job status
+    const wsUrl = import.meta.env.VITE_WS_URL
+    function setupGetJobStatusWebSocket() {
+      const { connect, subscribe } = useWebSocket(wsUrl, {
+        onMessage: (message) => {
+          const data = JSON.parse(message.body)
+          if (data && data.jobId && data.status && data.fileName)
+            jobStore.updateJobStatus(data.fileName, data.status)
+        },
+        onOpen: () => {
+          subscribe('/topic/jobStatus')
+        },
+        onError: (event) => {
+          console.error('WebSocket encountered an error:', event)
+        },
+        onClose: () => {
+        },
+      })
+
+      connect()
+    }
+
+    function setupSubmitJobWebSocket() {
+      const { connect, subscribe } = useWebSocket(wsUrl, {
+        onMessage: (message) => {
+          const data = JSON.parse(message.body)
+          if (data && data.jobId && data.fileName) {
+            const jobDetail: JobDetails = {
+              executionMode: data.executeMode as ExecutionMode,
+              job: data,
+              jobResultData: null,
+              jobStatus: '',
+              executionTime: 0,
+              startTime: Date.now(),
+              displayResult: true,
+              loading: false,
+            }
+            jobStore.addJob(data.fileName, jobDetail)
+          }
+        },
+        onOpen: () => {
+          subscribe('/topic/job')
+        },
+        onError: (event) => {
+          console.error('WebSocket encountered an error:', event)
+        },
+        onClose: () => {
+        },
+      })
+
+      connect()
+    }
+
+    onMounted(() => {
+      setupGetJobStatusWebSocket()
+      setupSubmitJobWebSocket()
+      getJobLog()
+    })
+
+    onUnmounted(() => {
+      jobStore.resetJob(currentKey.value)
+      if (refreshJobStatusIntervalId !== undefined) {
+        clearInterval(refreshJobStatusIntervalId)
+        refreshJobStatusIntervalId = undefined
+      }
+      if (createSessionIntervalId !== undefined) {
+        clearInterval(createSessionIntervalId)
+        createSessionIntervalId = undefined
+      }
+      if (getJobLogsIntervalId !== undefined) {
+        clearInterval(getJobLogsIntervalId)
+        getJobLogsIntervalId = undefined
+      }
+    })
+
     return {
-      ...toRefs(editorVariables),
-      editorMounted,
-      editorSave,
-      handleContentChange,
-      handleFormat,
       tabData,
-      handleConsoleUp,
-      handleConsoleDown,
-      consoleHeightType
     }
   },
   render() {
     return (
       <div class={styles.query}>
-        <div class={styles['menu-tree']}>
-          <MenuTree />
-        </div>
-        <div class={styles['editor-area']}>
-          <n-card class={styles.card} content-style={'padding: 5px 18px;display: flex;flex-direction: column;'}>
-            <div class={styles.tabs}>
-              <EditorTabs />
-            </div>
-            <div class={styles.debugger}>
-              <EditorDebugger onHandleFormat={this.handleFormat} onHandleSave={this.editorSave} />
-            </div>
-            <div class={styles.editor} style={`height: ${this.consoleHeightType === 'up' ? '20%' : '60%'}`}>
-              {
-                this.tabData.panelsList?.length > 0 &&
-                <n-card content-style={'padding: 0;'}>
-                  <MonacoEditor
-                    v-model={this.tabData.panelsList.find((item: any) => item.key === this.tabData.chooseTab).content}
-                    language={this.language}
-                    onEditorMounted={this.editorMounted}
-                    onEditorSave={this.editorSave}
-                    onChange={this.handleContentChange}
-                  />
+        <n-split direction="horizontal" max={0.35} min={0.16} resize-trigger-size={0} default-size={0.20}>
+          {{
+            '1': () => (
+              <div class={styles['menu-tree']}>
+                <MenuTree ref="menuTreeRef" />
+              </div>
+            ),
+            '2': () => (
+              <div class={styles['editor-area']}>
+                <n-card class={styles.card} content-style="padding: 5px 18px;display: flex;flex-direction: column; height:100%;">
+                  <div class={styles.tabs}>
+                    <EditorTabs />
+                  </div>
                 </n-card>
-              }
-            </div>
-            <div class={styles.console} style={`height: ${this.consoleHeightType === 'up' ? '80%' : '40%'}`}>
-              {
-                this.tabData.panelsList?.length > 0 &&
-                <n-card content-style={'padding: 0;'}>
-                  <EditorConsole onConsoleDown={this.handleConsoleDown} onConsoleUp={this.handleConsoleUp} />
-                </n-card>
-              }
-            </div>
-          </n-card>
-        </div>
+              </div>
+            ),
+            'resize-trigger': () => (
+              <div class={styles.split} />
+            ),
+          }}
+        </n-split>
       </div>
-    );
-  }
-});
+    )
+  },
+})

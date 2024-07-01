@@ -45,10 +45,12 @@ import org.apache.paimon.web.server.service.UserService;
 import org.apache.paimon.web.server.util.StringUtils;
 
 import cn.dev33.satoken.secure.SaSecureUtil;
+import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.common.base.Preconditions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -121,10 +123,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         /*if (CollectionUtils.isEmpty(userInfoVo.getTenantList())) {
             throw new UserNotBindTenantException();
         }*/
-
+        // Setting login user info to SaSession.
         StpUtil.login(user.getId(), loginDTO.isRememberMe());
         userInfoVo.setPermissions(StpUtil.getPermissionList());
-
+        SaSession saSession = StpUtil.getSession();
+        saSession.set(user.getId().toString(), userInfoVo);
         return userInfoVo;
     }
 
@@ -259,6 +262,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return this.updateById(user);
     }
 
+    @Override
+    public boolean updateUserStatus(User user) {
+        Preconditions.checkArgument(user != null && user.getId() != null);
+        return this.lambdaUpdate()
+                .set(User::getEnabled, user.getEnabled())
+                .eq(User::getId, user.getId())
+                .update();
+    }
+
+    @Override
+    public int allocateRole(User user) {
+        return this.insertUserRole(user);
+    }
+
     private int insertUserRole(User user) {
         int rows = 1;
         if (user.getRoleIds() != null && user.getRoleIds().length > 0) {
@@ -284,7 +301,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                         StringUtils.isNotEmpty(userWithRolesDTO.getNickname())
                                 ? userWithRolesDTO.getNickname()
                                 : "")
-                .userType(userWithRolesDTO.getUserType() == 0 ? "LOCAL" : "LDAP")
+                .userType(userWithRolesDTO.getUserType())
                 .mobile(
                         StringUtils.isNotEmpty(userWithRolesDTO.getMobile())
                                 ? userWithRolesDTO.getMobile()

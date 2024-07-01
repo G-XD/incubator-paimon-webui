@@ -18,22 +18,22 @@ under the License. */
 import tasks from '@/form-lib'
 import getElementByJson from '@/components/dynamic-form/get-elements-by-json'
 import type {
+  FormRules,
   IFormItem,
   IJsonItem,
-  FormRules
 } from '@/components/dynamic-form/types'
 
 export function useTask({
   data,
-  formType
+  formType,
 }: {
   data: any
   formType: string
 }): {
-  elementsRef: Ref<IFormItem[]>
-  rulesRef: Ref<FormRules>
-  model: any
-} {
+    elementsRef: Ref<IFormItem[]>
+    rulesRef: Ref<FormRules>
+    model: any
+  } {
   const jsonRef = ref([]) as Ref<IJsonItem[]>
   const elementsRef = ref([]) as Ref<IFormItem[]>
   const rulesRef = ref({})
@@ -43,13 +43,14 @@ export function useTask({
     jsonRef,
     updateElements: () => {
       getElements()
-    }
+    },
   }
 
   const task = tasks[formType as keyof typeof tasks]
   const { model, json } = task(params)
   jsonRef.value = json
-  const getElements = () => {
+
+  function getElements() {
     const { rules, elements } = getElementByJson(jsonRef.value, model)
     elementsRef.value = elements
     rulesRef.value = rules

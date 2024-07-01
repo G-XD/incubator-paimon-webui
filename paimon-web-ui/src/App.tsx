@@ -17,13 +17,31 @@ under the License. */
 
 import {
   darkTheme,
-  dateZhCN,
   dateEnUS,
+  dateZhCN,
+  enUS,
   zhCN,
-  enUS
 } from 'naive-ui'
+import hljs from 'highlight.js/lib/core'
+import csharp from 'highlight.js/lib/languages/csharp'
 import { useConfigStore } from '@/store/config'
 import themes from '@/themes'
+
+hljs.registerLanguage('csharp', csharp)
+
+const log = function (hljs: any) {
+  return {
+    contains: [
+      ...hljs.getLanguage('csharp').contains,
+      {
+        begin: /Job ID: [^\]]+/,
+        relevance: 0,
+      },
+    ],
+  }
+}
+
+hljs.registerLanguage('log', log)
 
 export default defineComponent({
   name: 'App',
@@ -36,20 +54,26 @@ export default defineComponent({
     return {
       theme,
       themeOverrides,
-      locale
+      locale,
+      hljs,
     }
   },
   render() {
-    return <n-config-provider
-      theme={this.theme}
-      theme-overrides={this.themeOverrides}
-      locale={this.locale === 'en' ? enUS : zhCN}
-      date-locale={this.locale === 'en' ? dateEnUS : dateZhCN}
-      style={{ width: '100%', height: '100vh' }}
-    >
-      <n-message-provider>
-        <router-view />
-      </n-message-provider>
-    </n-config-provider>
-  }
+    return (
+      <n-config-provider
+        theme={this.theme}
+        theme-overrides={this.themeOverrides}
+        locale={this.locale === 'en' ? enUS : zhCN}
+        date-locale={this.locale === 'en' ? dateEnUS : dateZhCN}
+        style={{ width: '100%', height: '100vh' }}
+        hljs={this.hljs}
+      >
+        <n-message-provider>
+          <n-dialog-provider>
+            <router-view />
+          </n-dialog-provider>
+        </n-message-provider>
+      </n-config-provider>
+    )
+  },
 })

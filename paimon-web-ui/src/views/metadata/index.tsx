@@ -15,12 +15,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License. */
 
-import { useCatalogStore } from '@/store/catalog'
-
 import styles from './index.module.scss'
 import MenuTree from './components/menu-tree'
 import Breadcrumb from './components/breadcrumb'
 import Tabs from './components/metadata-tabs'
+import { useCatalogStore } from '@/store/catalog'
 
 export default defineComponent({
   name: 'MetadataPage',
@@ -29,26 +28,39 @@ export default defineComponent({
     const catalogStoreRef = storeToRefs(catalogStore)
 
     return {
-      currentTable: catalogStoreRef.currentTable
+      currentTable: catalogStoreRef.currentTable,
     }
   },
   render() {
     return (
       <div class={styles.container}>
-        <MenuTree />
-        <div class={styles.content}>
-          {this.currentTable ? (
-            <>
-              <Breadcrumb />
-              <Tabs />
-            </>
-          ) : (
-            <div class={styles.empty}>
-              <n-empty description="Select the table. Please"></n-empty>
-            </div>
-          )}
-        </div>
+        <n-split direction="horizontal" max={0.45} min={0.12} resize-trigger-size={0} default-size={0.168}>
+          {{
+            '1': () => (
+              <MenuTree />
+            ),
+            '2': () => (
+              <div class={styles.content}>
+                {this.currentTable
+                  ? (
+                      <>
+                        <Breadcrumb />
+                        <Tabs />
+                      </>
+                    )
+                  : (
+                      <div class={styles.empty}>
+                        <n-empty description="Please choose a table."></n-empty>
+                      </div>
+                    )}
+              </div>
+            ),
+            'resize-trigger': () => (
+              <div class={styles.split} />
+            ),
+          }}
+        </n-split>
       </div>
     )
-  }
+  },
 })

@@ -22,33 +22,33 @@ import type { SchemaField, SchemaOption } from '@/api/models/catalog'
 export const fieldsColumns: DataTableColumns<SchemaField> = [
   {
     title: 'ID',
-    key: 'id'
+    key: 'id',
   },
   {
     title: 'Name',
-    key: 'name'
+    key: 'name',
   },
   {
     title: 'Type',
-    key: 'type'
+    key: 'type',
   },
   {
     title: 'Comment',
     key: 'comment',
     align: 'center',
     render: (row) => {
-      return row.comment || '-'
-    }
+      return row.description || '-'
+    },
   },
 ]
 
 export const optionsColumns: DataTableColumns<SchemaOption> = [
   {
     title: 'Key',
-    key: 'key'
+    key: 'key',
   },
   {
     title: 'Value',
-    key: 'value'
-  }
+    key: 'value',
+  },
 ]

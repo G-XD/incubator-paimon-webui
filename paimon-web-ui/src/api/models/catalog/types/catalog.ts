@@ -37,8 +37,10 @@ export interface CatalogDTO {
 }
 
 export interface FileSystemOption {
-  fileSystemType:string,
-  endpoint?:string,
-  accessKey?:string,
-  secretKey?:string
+  fileSystemType: string
+  endpoint?: string
+  accessKey?: string
+  secretKey?: string
+  hiveUri?: string
+  hiveConfDir?: string
 }

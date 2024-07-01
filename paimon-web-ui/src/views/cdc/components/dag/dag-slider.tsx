@@ -23,12 +23,12 @@ export default defineComponent({
   props: {
     graph: {
       type: Object,
-      default: () => {}
+      default: () => { },
     },
     dnd: {
       type: Object,
-      default: () => {}
-    }
+      default: () => { },
+    },
   },
   setup(props) {
     const { t } = useLocaleHooks()
@@ -37,31 +37,31 @@ export default defineComponent({
         {
           name: 'MySQL',
           value: 'MYSQL',
-          type: 'INPUT'
+          type: 'INPUT',
         },
         {
           name: 'Kafka',
           value: 'KAFKA',
-          type: 'INPUT'
+          type: 'INPUT',
         },
         {
           name: 'MongoDB',
           value: 'MONGODB',
-          type: 'INPUT'
+          type: 'INPUT',
         },
         {
           name: 'PostgreSQL',
           value: 'POSTGRESQL',
-          type: 'INPUT'
-        }
+          type: 'INPUT',
+        },
       ],
       sinkList: [
         {
           name: 'Paimon',
           value: 'PAIMON',
-          type: 'OUTPUT'
-        }
-      ]
+          type: 'OUTPUT',
+        },
+      ],
     })
 
     const handleNodeMove = (e: any, item: any) => {
@@ -77,45 +77,45 @@ export default defineComponent({
     return {
       t,
       ...toRefs(sliderVariables),
-      handleNodeMove
+      handleNodeMove,
     }
   },
-  render () {
+  render() {
     return (
       <div class={styles['dag-slider']} id="dag-slider">
-        <n-card class={styles.card} content-style={'overflow:scroll;'}>
+        <n-card class={styles.card} content-style="overflow:scroll;">
           <n-space vertical>
             <div class={styles.source}>
               <n-space vertical size={15}>
-                <div class={styles['title']}>Source</div>
-                  {
-                    this.sourceList.map((item) => {
-                      return (
-                        <n-button class={styles['list-item']} onMousedown={(e: any) => this.handleNodeMove(e, item)}>
-                          {item.name}
-                        </n-button>
-                      )
-                    })
-                  }
+                <div class={styles.title}>Source</div>
+                {
+                  this.sourceList.map((item) => {
+                    return (
+                      <n-button class={styles['list-item']} onMousedown={(e: any) => this.handleNodeMove(e, item)}>
+                        {item.name}
+                      </n-button>
+                    )
+                  })
+                }
               </n-space>
             </div>
             <div class={styles.sink}>
               <n-space vertical size={15}>
-                <div class={styles['title']}>Sink</div>
-                  {
-                    this.sinkList.map((item) => {
-                      return (
-                        <n-button class={styles['list-item']} onMousedown={(e: any) => this.handleNodeMove(e, item)}>
-                          {item.name}
-                        </n-button>
-                      )
-                    })
-                  }
+                <div class={styles.title}>Sink</div>
+                {
+                  this.sinkList.map((item) => {
+                    return (
+                      <n-button class={styles['list-item']} onMousedown={(e: any) => this.handleNodeMove(e, item)}>
+                        {item.name}
+                      </n-button>
+                    )
+                  })
+                }
               </n-space>
             </div>
           </n-space>
         </n-card>
       </div>
     )
-  }
+  },
 })
